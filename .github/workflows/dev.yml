@@ -3,7 +3,10 @@ name: Dev Client Build
 on:
   push:
     branches:
-      - next
+      - dev
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
