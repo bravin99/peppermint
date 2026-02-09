@@ -1,12 +1,15 @@
 name: docker-build
-on: workflow_dispatch
-
+on:
+  push:
+    branches:
+      - main
+      - dev
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -14,12 +17,11 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       
-      - name: Login to GitHub Container Registry
+      - name: Login to DockerHub
         uses: docker/login-action@v3
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
       
       - name: Determine environment and tag
         id: vars
@@ -32,11 +34,8 @@ jobs:
             env="dev"
           fi
           tag="${GITHUB_SHA:0:7}"
-          # Convert repository name to lowercase for ghcr.io
-          repo_lower=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
           echo "env=$env" >> "$GITHUB_OUTPUT"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
-          echo "repo_lower=$repo_lower" >> "$GITHUB_OUTPUT"
       
       - name: Build and push image
         uses: docker/build-push-action@v5
@@ -44,7 +43,7 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ steps.vars.outputs.repo_lower }}:${{ steps.vars.outputs.tag }}-${{ steps.vars.outputs.env }}
-            ghcr.io/${{ steps.vars.outputs.repo_lower }}:latest-${{ steps.vars.outputs.env }}
+            shumwe/truehost:${{ steps.vars.outputs.tag }}-${{ steps.vars.outputs.env }}
+            shumwe/truehost:latest-${{ steps.vars.outputs.env }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
